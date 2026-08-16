@@ -8,11 +8,19 @@ const packagePath = join(root, 'package.json')
 const apply = process.argv.includes('--apply')
 const checkOnly = process.argv.includes('--check')
 const harnessPackageName = '@deepseek-ai/dsh'
-const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
-const pnpmCommand = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm'
 
-function npm(args) {
-  return execFileSync(npmCommand, args, { cwd: root, encoding: 'utf8' }).trim()
+async function getPublishedVersion(packageName) {
+  const response = await fetch(`https://registry.npmjs.org/${encodeURIComponent(packageName)}/latest`, {
+    headers: { accept: 'application/json' },
+  })
+  if (!response.ok) {
+    throw new Error(`npm registry returned HTTP ${response.status} for ${packageName}`)
+  }
+  const manifest = await response.json()
+  if (typeof manifest.version !== 'string' || manifest.version.length === 0) {
+    throw new Error(`npm registry did not return a valid version for ${packageName}`)
+  }
+  return manifest.version
 }
 
 function incrementPatch(version) {
@@ -35,7 +43,7 @@ const runtimeNames = Object.keys(dependencies)
   .filter((name) => name === harnessPackageName || name.startsWith('@deepseek-ai/dsh-'))
   .sort()
 const inconsistentPins = runtimeNames.filter((name) => dependencies[name] !== currentVersion)
-const latestVersion = npm(['view', harnessPackageName, 'version'])
+const latestVersion = await getPublishedVersion(harnessPackageName)
 const updateAvailable = latestVersion !== currentVersion || inconsistentPins.length > 0
 
 if (!updateAvailable) {
@@ -59,7 +67,11 @@ if (!apply) {
 }
 
 const runtimePins = runtimeNames.map((name) => `${name}@${latestVersion}`)
-execFileSync(pnpmCommand, ['add', '--save-exact', ...runtimePins], {
+const pnpmCliPath = process.env.npm_execpath
+if (typeof pnpmCliPath !== 'string' || pnpmCliPath.length === 0) {
+  throw new Error('pnpm CLI path is unavailable; run this script through pnpm sync:harness')
+}
+execFileSync(process.execPath, [pnpmCliPath, 'add', '--save-exact', ...runtimePins], {
   cwd: root,
   stdio: 'inherit',
 })
