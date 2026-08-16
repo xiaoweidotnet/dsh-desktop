@@ -44,6 +44,8 @@ test('Harness runtime is sourced exclusively from exact published npm packages',
   assert.equal(existsSync(join(root, 'upstream')), false)
   const updater = readFileSync(join(root, 'scripts/update-harness-runtime.mjs'), 'utf8')
   assert.match(updater, /npm\(\['view', harnessPackageName, 'version'\]\)/)
+  assert.match(updater, /process\.platform === 'win32' \? 'npm\.cmd' : 'npm'/)
+  assert.match(updater, /process\.platform === 'win32' \? 'pnpm\.cmd' : 'pnpm'/)
   assert.doesNotMatch(updater, /deepseek-harness\.git|sourceCommit|manifest\.json/)
   assert.match(readFileSync(join(root, 'RELEASE.md'), 'utf8'), /WINDOWS_CERTIFICATE_BASE64/)
 })

@@ -8,9 +8,11 @@ const packagePath = join(root, 'package.json')
 const apply = process.argv.includes('--apply')
 const checkOnly = process.argv.includes('--check')
 const harnessPackageName = '@deepseek-ai/dsh'
+const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
+const pnpmCommand = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm'
 
 function npm(args) {
-  return execFileSync('npm', args, { cwd: root, encoding: 'utf8' }).trim()
+  return execFileSync(npmCommand, args, { cwd: root, encoding: 'utf8' }).trim()
 }
 
 function incrementPatch(version) {
@@ -57,7 +59,7 @@ if (!apply) {
 }
 
 const runtimePins = runtimeNames.map((name) => `${name}@${latestVersion}`)
-execFileSync('pnpm', ['add', '--save-exact', ...runtimePins], {
+execFileSync(pnpmCommand, ['add', '--save-exact', ...runtimePins], {
   cwd: root,
   stdio: 'inherit',
 })
