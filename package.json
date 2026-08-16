@@ -25,6 +25,7 @@
     "smoke:harness": "node scripts/harness-smoke.mjs",
     "smoke:packaged": "node scripts/packaged-smoke.mjs",
     "dist:dir": "electron-builder --config electron-builder.config.cjs --dir --publish never",
+    "dist:dir:mac:x64": "electron-builder --config electron-builder.config.cjs --mac --x64 --dir --publish never",
     "dist:mac": "electron-builder --config electron-builder.config.cjs --mac --publish never",
     "dist:mac:x64": "electron-builder --config electron-builder.config.cjs --mac --x64 --publish never",
     "dist:win": "electron-builder --config electron-builder.config.cjs --win --x64 --publish never",

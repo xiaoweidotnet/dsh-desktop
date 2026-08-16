@@ -9,14 +9,24 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: desktop-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
-    name: Verify on ${{ matrix.os }}
+    name: Verify ${{ matrix.platform }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, windows-2022]
+        include:
+          - os: macos-14
+            platform: macOS ARM64
+          - os: macos-15-intel
+            platform: macOS x64
+          - os: windows-2022
+            platform: Windows x64/ARM64
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -37,13 +47,13 @@ jobs:
       - name: Start the real Harness Web server
         run: pnpm smoke:harness
       - name: Build unpacked desktop app
-        if: runner.os == 'Windows'
+        if: matrix.platform == 'Windows x64/ARM64'
         run: pnpm dist:win
       - name: Smoke test the packaged Windows runtime
-        if: runner.os == 'Windows'
+        if: matrix.platform == 'Windows x64/ARM64'
         run: pnpm smoke:packaged -- dist/win-unpacked
       - name: Invoke the Windows PowerShell host
-        if: runner.os == 'Windows'
+        if: matrix.platform == 'Windows x64/ARM64'
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -53,19 +63,19 @@ jobs:
           }
           Write-Host "PowerShell $($version -join '') is available."
       - name: Build Windows ARM64 unpacked desktop app
-        if: runner.os == 'Windows'
+        if: matrix.platform == 'Windows x64/ARM64'
         run: pnpm dist:win:arm64
-      - name: Build unpacked desktop app
-        if: runner.os == 'macOS'
+      - name: Build unpacked macOS ARM64 app
+        if: matrix.platform == 'macOS ARM64'
         run: pnpm dist:dir
       - name: Smoke test the packaged macOS ARM64 runtime
-        if: runner.os == 'macOS'
+        if: matrix.platform == 'macOS ARM64'
         run: pnpm smoke:packaged -- dist/mac-arm64
       - name: Build macOS x64 unpacked desktop app
-        if: runner.os == 'macOS'
-        run: pnpm dist:mac:x64
+        if: matrix.platform == 'macOS x64'
+        run: pnpm dist:dir:mac:x64
       - name: Smoke test the packaged macOS x64 runtime
-        if: runner.os == 'macOS'
+        if: matrix.platform == 'macOS x64'
         run: pnpm smoke:packaged -- dist/mac --x64
       - name: Verify production bundle boundary
         run: pnpm verify:bundle

@@ -85,6 +85,10 @@ test('production bundle verification checks every requested architecture', () =>
   assert.match(verifier, /koffi-win32-arm64/)
   assert.match(verifier, /dsh-tool-pwsh/)
   assert.match(verifier, /dsh-sandbox-windows-acl/)
+  const ci = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8')
+  assert.match(ci, /macos-14/)
+  assert.match(ci, /macos-15-intel/)
+  assert.match(ci, /Windows x64\/ARM64/)
 })
 
 test('packaged smoke uses the bundled Electron runtime', () => {
