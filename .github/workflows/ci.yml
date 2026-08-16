@@ -1,0 +1,71 @@
+name: Desktop CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, windows-2022]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.3
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check the published Harness runtime pin
+        run: pnpm check:harness
+      - name: Verify project
+        run: pnpm verify
+      - name: Run tests
+        run: pnpm test
+      - name: Start the real Harness Web server
+        run: pnpm smoke:harness
+      - name: Build unpacked desktop app
+        if: runner.os == 'Windows'
+        run: pnpm dist:win
+      - name: Smoke test the packaged Windows runtime
+        if: runner.os == 'Windows'
+        run: pnpm smoke:packaged -- dist/win-unpacked
+      - name: Invoke the Windows PowerShell host
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = & pwsh -NoLogo -NoProfile -NonInteractive -Command '$PSVersionTable.PSVersion.ToString()'
+          if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace(($version -join ''))) {
+            throw 'PowerShell was not available to the packaged Harness test host.'
+          }
+          Write-Host "PowerShell $($version -join '') is available."
+      - name: Build Windows ARM64 unpacked desktop app
+        if: runner.os == 'Windows'
+        run: pnpm dist:win:arm64
+      - name: Build unpacked desktop app
+        if: runner.os == 'macOS'
+        run: pnpm dist:dir
+      - name: Smoke test the packaged macOS ARM64 runtime
+        if: runner.os == 'macOS'
+        run: pnpm smoke:packaged -- dist/mac-arm64
+      - name: Build macOS x64 unpacked desktop app
+        if: runner.os == 'macOS'
+        run: pnpm dist:mac:x64
+      - name: Smoke test the packaged macOS x64 runtime
+        if: runner.os == 'macOS'
+        run: pnpm smoke:packaged -- dist/mac --x64
+      - name: Verify production bundle boundary
+        run: pnpm verify:bundle

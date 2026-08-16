@@ -1,0 +1,69 @@
+name: Release desktop application
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - os: macos-14
+            target: '--mac --arm64'
+            signing: mac
+          - os: macos-14
+            target: '--mac --x64'
+            signing: mac
+          - os: windows-2022
+            target: '--win --x64'
+            signing: windows
+          - os: windows-2022
+            target: '--win --arm64'
+            signing: windows
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      RELEASE_BUILD: 'true'
+      CSC_LINK: ${{ matrix.signing == 'mac' && secrets.MAC_CERTIFICATE_BASE64 || '' }}
+      CSC_KEY_PASSWORD: ${{ matrix.signing == 'mac' && secrets.MAC_CERTIFICATE_PASSWORD || '' }}
+      WIN_CSC_LINK: ${{ matrix.signing == 'windows' && secrets.WINDOWS_CERTIFICATE_BASE64 || '' }}
+      WIN_CSC_KEY_PASSWORD: ${{ matrix.signing == 'windows' && secrets.WINDOWS_CERTIFICATE_PASSWORD || '' }}
+      APPLE_ID: ${{ matrix.signing == 'mac' && secrets.APPLE_ID || '' }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.signing == 'mac' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
+      APPLE_TEAM_ID: ${{ matrix.signing == 'mac' && secrets.APPLE_TEAM_ID || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.3
+          cache: pnpm
+      - name: Install desktop dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check the published Harness runtime pin
+        run: pnpm check:harness
+      - name: Verify before release
+        run: |
+          pnpm verify
+          pnpm test
+          pnpm smoke:harness
+      - name: Verify release credentials
+        run: node scripts/verify-release-env.mjs ${{ matrix.signing }}
+      - name: Build release bundle before publishing
+        shell: bash
+        run: pnpm exec electron-builder --config electron-builder.config.cjs ${{ matrix.target }} --publish never
+      - name: Verify production bundle boundary
+        run: pnpm verify:bundle
+      - name: Publish signed release assets
+        shell: bash
+        run: pnpm exec electron-builder --config electron-builder.config.cjs ${{ matrix.target }} --publish always

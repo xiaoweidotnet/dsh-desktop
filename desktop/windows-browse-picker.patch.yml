@@ -1,0 +1,10 @@
+# Windows desktop adaptation: use the upstream in-app directory browser.
+# The native Win32 picker launches a COM worker that is not reliable when the
+# Harness is running under Electron's private Node runtime.
+- id: directory-picker
+  disabled: true
+- insert:
+    - id: directory-picker-browse
+      name: '@deepseek-ai/dsh-host-directory-picker-browse'
+    - id: ui-directory-picker-browse
+      name: '@deepseek-ai/dsh-client-ui-directory-picker-browse'

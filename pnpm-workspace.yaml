@@ -1,0 +1,19 @@
+allowBuilds:
+  '@deepseek-ai/dsh-subprocess-local': true
+  '@google/genai': true
+  electron-winstaller: true
+  koffi: true
+  node-pty: true
+  protobufjs: true
+
+# Cross-builds on Apple Silicon need optional native packages for every
+# shipped darwin/win32 x64/arm64 target.
+supportedArchitectures:
+  os:
+    - current
+    - darwin
+    - win32
+  cpu:
+    - current
+    - x64
+    - arm64

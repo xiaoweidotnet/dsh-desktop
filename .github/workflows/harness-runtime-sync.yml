@@ -1,0 +1,56 @@
+name: Check and sync published Harness runtime
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.3
+          cache: pnpm
+      - name: Install desktop dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Apply a published Harness runtime update when available
+        id: sync
+        shell: bash
+        run: |
+          set +e
+          pnpm check:harness
+          current=$?
+          set -e
+          if [ "$current" -eq 0 ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          pnpm sync:harness
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+      - name: Verify the synchronized runtime
+        if: steps.sync.outputs.changed == 'true'
+        run: |
+          pnpm verify
+          pnpm test
+      - name: Open a Harness runtime update pull request
+        if: steps.sync.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: 'chore: sync published DeepSeek Harness runtime'
+          title: 'chore: sync published DeepSeek Harness runtime'
+          body: |
+            This automated change updates the exact npm-published Harness runtime closure and bumps the desktop patch version.
+
+            No Harness source checkout is downloaded or committed. Merge only after Desktop CI passes on macOS and Windows.
+          branch: automation/sync-deepseek-harness-runtime
+          delete-branch: true
