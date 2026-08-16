@@ -72,6 +72,94 @@ function status(kind, message, extra = {}) {
   sendStatus({ kind, message, workspaceDir: settings?.workspaceDir, ...extra })
 }
 
+function isHarnessPage(url) {
+  return typeof currentUrl === 'string' && url.startsWith(currentUrl)
+}
+
+function reloadHarnessPage() {
+  if (windowRef === undefined || windowRef.isDestroyed() || currentUrl === undefined) return false
+  const contents = windowRef.webContents
+  if (isHarnessPage(contents.getURL())) {
+    contents.reload()
+  } else {
+    void contents.loadURL(currentUrl)
+  }
+  return true
+}
+
+async function installHarnessRefreshControl() {
+  if (windowRef === undefined || windowRef.isDestroyed()) return
+  const contents = windowRef.webContents
+  if (!isHarnessPage(contents.getURL())) return
+  await contents.executeJavaScript(`
+    (() => {
+      const controlId = 'dsh-desktop-refresh-control'
+      if (document.getElementById(controlId)) return
+
+      const host = document.createElement('div')
+      host.id = controlId
+      const shadow = host.attachShadow({ mode: 'closed' })
+      const style = document.createElement('style')
+      style.textContent = \`
+        :host {
+          all: initial;
+          position: fixed;
+          top: 72px;
+          right: 18px;
+          z-index: 2147483647;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        button {
+          display: grid;
+          width: 38px;
+          height: 38px;
+          padding: 0;
+          place-items: center;
+          color: rgba(244, 247, 255, .9);
+          background: rgba(26, 29, 36, .82);
+          border: 1px solid rgba(255, 255, 255, .12);
+          border-radius: 11px;
+          box-shadow: 0 8px 28px rgba(0, 0, 0, .24);
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
+          cursor: pointer;
+          transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+        }
+        button:hover {
+          background: rgba(48, 54, 68, .94);
+          border-color: rgba(118, 167, 255, .48);
+          transform: translateY(-1px);
+        }
+        button:active { transform: translateY(0) scale(.96); }
+        button:focus-visible { outline: 2px solid #76a7ff; outline-offset: 2px; }
+        svg { width: 18px; height: 18px; }
+        button[aria-busy="true"] svg { animation: dsh-refresh-spin 650ms linear infinite; }
+        @keyframes dsh-refresh-spin { to { transform: rotate(360deg); } }
+        @media (prefers-reduced-motion: reduce) {
+          button { transition: none; }
+          button[aria-busy="true"] svg { animation: none; }
+        }
+      \`
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.title = '刷新 Harness 页面（Ctrl/Cmd + R）'
+      button.setAttribute('aria-label', '刷新 Harness 页面')
+      button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.08 9A7 7 0 0 1 18.2 6.1L20 8M4 16l1.8 1.9A7 7 0 0 0 17.92 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      button.addEventListener('click', async () => {
+        if (button.getAttribute('aria-busy') === 'true') return
+        button.setAttribute('aria-busy', 'true')
+        try {
+          await window.dshDesktop.reloadPage()
+        } finally {
+          button.removeAttribute('aria-busy')
+        }
+      })
+      shadow.append(style, button)
+      document.documentElement.append(host)
+    })()
+  `, true)
+}
+
 function dshPackage() {
   const manifestPath = require.resolve('@deepseek-ai/dsh/package.json')
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
@@ -365,6 +453,18 @@ function createMenu() {
     // can type normally but Cmd+V on macOS never reaches the renderer.
     { role: 'editMenu' },
     {
+      label: '视图',
+      submenu: [
+        {
+          label: '刷新 Harness 页面',
+          accelerator: 'CmdOrCtrl+R',
+          click: () => reloadHarnessPage(),
+        },
+        { type: 'separator' },
+        { role: 'togglefullscreen', label: '切换全屏' },
+      ],
+    },
+    {
       label: '工作区',
       submenu: [
         { label: '选择工作区…', click: () => void chooseWorkspace() },
@@ -401,6 +501,12 @@ function createWindow() {
       void shell.openExternal(url)
     }
   })
+  windowRef.webContents.on('did-finish-load', () => {
+    void installHarnessRefreshControl().catch(() => {
+      // A navigation or window close can race the cosmetic control injection.
+      // The Harness page itself remains usable and the next load retries it.
+    })
+  })
   return windowRef
 }
 
@@ -416,6 +522,7 @@ ipcMain.handle('dsh:choose-workspace', () => chooseWorkspace())
 ipcMain.handle('dsh:open-logs', () => shell.openPath(paths().logDir))
 ipcMain.handle('dsh:check-updates', () => showUpdateResult())
 ipcMain.handle('dsh:check-desktop-updates', () => showDesktopUpdateResult())
+ipcMain.handle('dsh:reload-page', () => reloadHarnessPage())
 
 app.whenReady().then(async () => {
   app.setName('DeepSeek Harness')

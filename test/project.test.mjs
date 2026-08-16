@@ -23,6 +23,18 @@ test('desktop exposes native editing commands for renderer inputs', () => {
   assert.match(main, /\{ role: 'editMenu' \}/)
 })
 
+test('desktop exposes an in-page Harness refresh control', () => {
+  const main = readFileSync(join(root, 'desktop/main.js'), 'utf8')
+  const preload = readFileSync(join(root, 'desktop/preload.js'), 'utf8')
+  assert.match(main, /function reloadHarnessPage\(\)/)
+  assert.match(main, /dsh-desktop-refresh-control/)
+  assert.match(main, /刷新 Harness 页面/)
+  assert.match(main, /accelerator: 'CmdOrCtrl\+R'/)
+  assert.match(main, /webContents\.on\('did-finish-load'/)
+  assert.match(main, /ipcMain\.handle\('dsh:reload-page'/)
+  assert.match(preload, /reloadPage: \(\) => ipcRenderer\.invoke\('dsh:reload-page'\)/)
+})
+
 test('open-source documentation is bilingual and licensed', () => {
   const readmeZh = readFileSync(join(root, 'README.md'), 'utf8')
   const readmeEn = readFileSync(join(root, 'README.en.md'), 'utf8')

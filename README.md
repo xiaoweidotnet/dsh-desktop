@@ -29,6 +29,7 @@ DeepSeek 官方的 `npx` 启动方式与本项目使用的是同一个 npm 发�
 - 支持 macOS ARM64/x64 和 Windows x64/ARM64。
 - 保持官方 `dsh web` 调用形态和原生 Harness Web UI。
 - 自动选择本地空闲端口，只监听 `127.0.0.1`。
+- 页面内提供桌面刷新按钮，也可使用 `Ctrl/Cmd + R` 重新加载 Harness 页面。
 - 会话、设置、凭证和附件保存在系统用户数据目录。
 - 可视化选择工作区，Windows 使用 Harness 官方应用内目录浏览后端。
 - macOS 正式签名包支持 GitHub Release 更新；Windows 提供便携 ZIP。

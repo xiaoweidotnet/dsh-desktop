@@ -29,6 +29,7 @@ DeepSeek's official `npx` command and this project use the same published npm pa
 - macOS ARM64/x64 and Windows x64/ARM64 support.
 - The original `dsh web` invocation and native Harness Web UI.
 - An automatically selected free port bound only to `127.0.0.1`.
+- An in-page desktop refresh button, plus `Ctrl/Cmd + R` to reload the Harness page.
 - Persistent sessions, settings, credentials, and attachments in the OS user-data directory.
 - Visual workspace selection, with Harness's in-app directory browser on Windows.
 - GitHub Release updates for signed macOS builds and portable ZIP distribution on Windows.
