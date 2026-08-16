@@ -61,9 +61,9 @@
 - 开发模式以及打包 macOS ARM64/x64 App 的窗口启动链路均已实际验证：应用打开后自动启动真实 `dsh web`，本地页面返回 HTTP 200；Windows CI 配置已加入相同的最终包启动检查，Windows ARM64 则做包边界验证。
 - `pnpm verify:bundle` 已分别验证 macOS ARM64、macOS x64、Windows x64 和 Windows ARM64 未安装目录：开发脚本、测试和构建配置均未打包，`@deepseek-ai/dsh`、PowerShell/sandbox 运行时、四架构 `sharp`/`koffi` 原生模块与 `electron-updater` 均存在。
 - 发布配置已验证：仅当构建环境提供 `GITHUB_REPOSITORY` 时启用 GitHub publisher；正式 macOS 包由 `electron-updater` 自动检查，Windows ZIP 明确走手动替换流程，`--publish never` 的本地包不会误连发布渠道。
-- Release workflow 已按平台隔离 macOS/Windows 签名凭据，串行发布 macOS ARM64/x64、Windows x64/ARM64 资产以避免同一 GitHub Release 资产竞争，并在 `RELEASE_BUILD=true` 且凭据缺失时 fail closed。
+- Release workflow 已按平台隔离 macOS/Windows 签名凭据，串行发布 macOS ARM64/x64、Windows x64/ARM64 资产以避免同一 GitHub Release 资产竞争；默认生成未签名包，设置 `RELEASE_SIGNING=true` 后才强制检查签名凭据。
 - 尚未虚构 Windows 真机运行、签名/公证或在线升级回滚结果；这些仍是发布前必须在对应平台和真实 Release 上完成的验收项。
 
 ## 当前结论
 
-本工作区交付的是可运行的桌面封装、跨平台构建入口、Windows/macOS CI、npm 运行时同步 workflow 和可接入 GitHub Release 的更新实现。工作区不保留 Harness 源码，开发运行使用 `pnpm dev`；当前 macOS 可直接使用 `dist/DeepSeek-Harness-0.1.0-mac-arm64.dmg` 或 `dist/DeepSeek-Harness-0.1.0-mac-x64.dmg`。API Key、模型选择和工作区内容属于用户本机数据，不应写入仓库或构建产物。
+本工作区交付的是可运行的桌面封装、跨平台构建入口、Windows/macOS CI、npm 运行时同步 workflow 和可接入 GitHub Release 的更新实现。工作区不保留 Harness 源码或本地插件，开发运行使用 `pnpm dev`。API Key、模型选择、工作区内容和本地插件属于用户本机数据，不应写入仓库或构建产物。

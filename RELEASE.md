@@ -4,7 +4,7 @@
 
 ## 第一次配置
 
-把本项目放入一个 GitHub 仓库，并在仓库的 Actions secrets 中配置：
+把本项目放入一个 GitHub 仓库即可生成未签名的测试/分发包。若要发布没有系统安全警告的正式包，再在仓库的 Actions secrets 中配置签名凭据，并设置仓库变量 `RELEASE_SIGNING=true`。
 
 ### macOS
 
@@ -19,7 +19,7 @@
 - `WINDOWS_CERTIFICATE_BASE64`：代码签名 PFX 证书的 base64 内容
 - `WINDOWS_CERTIFICATE_PASSWORD`：PFX 密码
 
-证书、密码和 API Key 不得提交到仓库。Release workflow 会在缺少对应凭据时直接失败，不发布未签名的正式包。
+证书、密码和 API Key 不得提交到仓库。未设置 `RELEASE_SIGNING=true` 时，Release workflow 会生成未签名包；用户首次打开 macOS 包时可能需要在系统设置中允许，Windows 包仍然是可解压 ZIP。
 
 ## 发布流程
 
@@ -43,7 +43,7 @@
 
 ## 更新链路
 
-`harness-runtime-sync.yml` 每周只检查 npm Registry 上已发布的 `@deepseek-ai/dsh` 版本。发现变化后，它会更新精确依赖闭包、递增桌面 patch 版本并创建 PR，全程不下载 Harness 源码。合并后推送新 tag，Release workflow 生成新的签名桌面包。macOS 已安装应用通过 `electron-updater` 检查 GitHub Release，下载并在用户确认后重启安装；Windows 使用便携 ZIP，不调用 NSIS/EXE 安装器，应用内会提示用户下载最新版 ZIP、退出旧版本并解压到新目录。
+`harness-runtime-sync.yml` 每周只检查 npm Registry 上已发布的 `@deepseek-ai/dsh` 版本。发现变化后，它会更新精确依赖闭包、递增桌面 patch 版本并创建 PR，全程不下载 Harness 源码。合并后推送新 tag，Release workflow 生成新的桌面包；配置 `RELEASE_SIGNING=true` 时生成签名包，否则生成未签名包。macOS 已安装应用通过 `electron-updater` 检查 GitHub Release，下载并在用户确认后重启安装；Windows 使用便携 ZIP，不调用 NSIS/EXE 安装器，应用内会提示用户下载最新版 ZIP、退出旧版本并解压到新目录。
 
 已安装的旧版本不会直接执行 Git、pnpm 或 Node.js，也不会自行修改本地 Harness 源码。更新来自新的完整桌面包；Windows 更新时工作区和设置仍保存在用户数据目录，不会因替换应用目录而丢失。
 

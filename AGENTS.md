@@ -31,13 +31,13 @@ pnpm verify
 pnpm test
 ```
 
-`pnpm check:harness` is a CI-friendly comparison between the exact local `@deepseek-ai/dsh` pin and npm's published `latest` version. `pnpm sync:harness` aligns every explicit `@deepseek-ai/dsh-*` runtime peer to that version and bumps the desktop patch version. A GitHub source commit alone is not a releasable Desktop update; DeepSeek must first publish the npm runtime, then this project must build and publish a new signed desktop release.
+`pnpm check:harness` is a CI-friendly comparison between the exact local `@deepseek-ai/dsh` pin and npm's published `latest` version. `pnpm sync:harness` aligns every explicit `@deepseek-ai/dsh-*` runtime peer to that version and bumps the desktop patch version. A GitHub source commit alone is not a releasable Desktop update; DeepSeek must first publish the npm runtime, then this project must build and publish a new desktop release. Signing is enabled only when the release repository variable `RELEASE_SIGNING=true` is configured.
 
 `.github/workflows/harness-runtime-sync.yml` checks npm weekly, updates the pinned runtime closure, bumps the desktop patch version, and opens a pull request without downloading source. `.github/workflows/release.yml` publishes macOS and Windows assets from a version tag. The GitHub Release feed is what the packaged app's `electron-updater` consumes; macOS signing/notarization secrets are required for a production update to install cleanly.
 
-`RELEASE.md` is the operational checklist for configuring repository secrets, publishing all four architecture targets (Windows as ZIP, not an installer), and validating the signed update path. Keep it aligned with the release workflow.
+`RELEASE.md` is the operational checklist for configuring repository secrets, publishing all four architecture targets (Windows as ZIP, not an installer), and validating the signed or unsigned update path. Keep it aligned with the release workflow.
 
-Release CI sets `RELEASE_BUILD=true` and fails closed unless the relevant signing credentials exist. macOS expects `MAC_CERTIFICATE_BASE64`, `MAC_CERTIFICATE_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, and `APPLE_TEAM_ID`; Windows expects `WINDOWS_CERTIFICATE_BASE64` and `WINDOWS_CERTIFICATE_PASSWORD`. The workflow scopes the macOS certificate variables to the macOS job and the Windows certificate variables to the Windows job.
+Release CI builds unsigned artifacts by default. Set the repository variable `RELEASE_SIGNING=true` to require signing and configure the relevant credentials: macOS expects `MAC_CERTIFICATE_BASE64`, `MAC_CERTIFICATE_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, and `APPLE_TEAM_ID`; Windows expects `WINDOWS_CERTIFICATE_BASE64` and `WINDOWS_CERTIFICATE_PASSWORD`. The workflow scopes the macOS certificate variables to the macOS job and the Windows certificate variables to the Windows job.
 
 `pnpm-workspace.yaml` explicitly allows the native build steps required by Harness (`node-pty`, `koffi`, and the local subprocess helper). It also installs optional native packages for the shipped darwin/win32 x64/arm64 targets so cross-architecture builds do not miss `sharp` or `koffi`. Keep build approvals narrow; do not switch the project to allow every dependency build script.
 

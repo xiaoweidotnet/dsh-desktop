@@ -8,9 +8,10 @@ module.exports = {
   appId: 'ai.deepseek.harness.desktop',
   productName: 'DeepSeek Harness',
   artifactName: 'DeepSeek-Harness-${version}-${os}-${arch}.${ext}',
-  // Release CI must fail closed when signing credentials are missing. Local
-  // builds intentionally remain unsigned so developers can still test them.
-  forceCodeSigning: process.env.RELEASE_BUILD === 'true',
+  // Signing is enabled explicitly by the release workflow when certificates
+  // are configured. Unsigned packages remain usable for testing and can be
+  // distributed with the platform's normal untrusted-app warning.
+  forceCodeSigning: process.env.RELEASE_SIGNING === 'true',
   asar: false,
   files: [
     'desktop/**/*',

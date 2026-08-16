@@ -31,7 +31,10 @@ jobs:
             signing: windows
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      RELEASE_BUILD: 'true'
+      # Set the repository variable RELEASE_SIGNING=true after adding the
+      # platform certificate and notarization secrets. Without it, the same
+      # artifacts are built unsigned and remain clearly marked as unsigned.
+      RELEASE_SIGNING: ${{ vars.RELEASE_SIGNING == 'true' }}
       CSC_LINK: ${{ matrix.signing == 'mac' && secrets.MAC_CERTIFICATE_BASE64 || '' }}
       CSC_KEY_PASSWORD: ${{ matrix.signing == 'mac' && secrets.MAC_CERTIFICATE_PASSWORD || '' }}
       WIN_CSC_LINK: ${{ matrix.signing == 'windows' && secrets.WINDOWS_CERTIFICATE_BASE64 || '' }}
@@ -57,13 +60,14 @@ jobs:
           pnpm verify
           pnpm test
           pnpm smoke:harness
-      - name: Verify release credentials
+      - name: Verify release credentials when signing is enabled
+        if: vars.RELEASE_SIGNING == 'true'
         run: node scripts/verify-release-env.mjs ${{ matrix.signing }}
       - name: Build release bundle before publishing
         shell: bash
         run: pnpm exec electron-builder --config electron-builder.config.cjs ${{ matrix.target }} --publish never
       - name: Verify production bundle boundary
         run: pnpm verify:bundle
-      - name: Publish signed release assets
+      - name: Publish release assets
         shell: bash
         run: pnpm exec electron-builder --config electron-builder.config.cjs ${{ matrix.target }} --publish always

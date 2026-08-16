@@ -70,7 +70,7 @@ test('release configuration only enables publishing with an explicit repository'
   assert.match(config, /provider: 'github'/)
   assert.doesNotMatch(config, /upstream/)
   assert.doesNotMatch(config, /'electron-builder\.config\.cjs'/)
-  assert.match(config, /forceCodeSigning: process\.env\.RELEASE_BUILD === 'true'/)
+  assert.match(config, /forceCodeSigning: process\.env\.RELEASE_SIGNING === 'true'/)
   assert.match(config, /target: \['zip'\]/)
   assert.match(config, /-portable\.\$\{ext\}/)
   assert.doesNotMatch(config, /target: \['nsis'\]/)
@@ -87,6 +87,8 @@ test('release configuration only enables publishing with an explicit repository'
   assert.match(releaseWorkflow, /--mac --x64/)
   assert.match(releaseWorkflow, /--win --x64/)
   assert.match(releaseWorkflow, /--win --arm64/)
+  assert.match(releaseWorkflow, /RELEASE_SIGNING/)
+  assert.match(releaseWorkflow, /if: vars\.RELEASE_SIGNING == 'true'/)
 })
 
 test('production bundle verification checks every requested architecture', () => {
