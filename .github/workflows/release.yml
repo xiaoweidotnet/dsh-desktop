@@ -35,13 +35,10 @@ jobs:
       # platform certificate and notarization secrets. Without it, the same
       # artifacts are built unsigned and remain clearly marked as unsigned.
       RELEASE_SIGNING: ${{ vars.RELEASE_SIGNING == 'true' }}
-      CSC_LINK: ${{ matrix.signing == 'mac' && secrets.MAC_CERTIFICATE_BASE64 || '' }}
-      CSC_KEY_PASSWORD: ${{ matrix.signing == 'mac' && secrets.MAC_CERTIFICATE_PASSWORD || '' }}
-      WIN_CSC_LINK: ${{ matrix.signing == 'windows' && secrets.WINDOWS_CERTIFICATE_BASE64 || '' }}
-      WIN_CSC_KEY_PASSWORD: ${{ matrix.signing == 'windows' && secrets.WINDOWS_CERTIFICATE_PASSWORD || '' }}
-      APPLE_ID: ${{ matrix.signing == 'mac' && secrets.APPLE_ID || '' }}
-      APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.signing == 'mac' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
-      APPLE_TEAM_ID: ${{ matrix.signing == 'mac' && secrets.APPLE_TEAM_ID || '' }}
+      # An empty CSC_LINK is interpreted by electron-builder as the current
+      # directory. Disable identity discovery unless signing is explicitly on;
+      # signing variables are injected only in that mode below.
+      CSC_IDENTITY_AUTO_DISCOVERY: ${{ vars.RELEASE_SIGNING == 'true' && 'true' || 'false' }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -60,6 +57,27 @@ jobs:
           pnpm verify
           pnpm test
           pnpm smoke:harness
+      - name: Configure signing environment
+        if: vars.RELEASE_SIGNING == 'true'
+        shell: bash
+        env:
+          RELEASE_CSC_LINK: ${{ matrix.signing == 'mac' && secrets.MAC_CERTIFICATE_BASE64 || '' }}
+          RELEASE_CSC_KEY_PASSWORD: ${{ matrix.signing == 'mac' && secrets.MAC_CERTIFICATE_PASSWORD || '' }}
+          RELEASE_WIN_CSC_LINK: ${{ matrix.signing == 'windows' && secrets.WINDOWS_CERTIFICATE_BASE64 || '' }}
+          RELEASE_WIN_CSC_KEY_PASSWORD: ${{ matrix.signing == 'windows' && secrets.WINDOWS_CERTIFICATE_PASSWORD || '' }}
+          RELEASE_APPLE_ID: ${{ matrix.signing == 'mac' && secrets.APPLE_ID || '' }}
+          RELEASE_APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.signing == 'mac' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
+          RELEASE_APPLE_TEAM_ID: ${{ matrix.signing == 'mac' && secrets.APPLE_TEAM_ID || '' }}
+        run: |
+          {
+            echo "CSC_LINK=$RELEASE_CSC_LINK"
+            echo "CSC_KEY_PASSWORD=$RELEASE_CSC_KEY_PASSWORD"
+            echo "WIN_CSC_LINK=$RELEASE_WIN_CSC_LINK"
+            echo "WIN_CSC_KEY_PASSWORD=$RELEASE_WIN_CSC_KEY_PASSWORD"
+            echo "APPLE_ID=$RELEASE_APPLE_ID"
+            echo "APPLE_APP_SPECIFIC_PASSWORD=$RELEASE_APPLE_APP_SPECIFIC_PASSWORD"
+            echo "APPLE_TEAM_ID=$RELEASE_APPLE_TEAM_ID"
+          } >> "$GITHUB_ENV"
       - name: Verify release credentials when signing is enabled
         if: vars.RELEASE_SIGNING == 'true'
         run: node scripts/verify-release-env.mjs ${{ matrix.signing }}

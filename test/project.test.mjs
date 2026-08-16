@@ -89,6 +89,8 @@ test('release configuration only enables publishing with an explicit repository'
   assert.match(releaseWorkflow, /--win --arm64/)
   assert.match(releaseWorkflow, /RELEASE_SIGNING/)
   assert.match(releaseWorkflow, /if: vars\.RELEASE_SIGNING == 'true'/)
+  assert.match(releaseWorkflow, /CSC_IDENTITY_AUTO_DISCOVERY/)
+  assert.match(releaseWorkflow, /Configure signing environment/)
 })
 
 test('production bundle verification checks every requested architecture', () => {
